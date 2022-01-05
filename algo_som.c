@@ -48,6 +48,9 @@ float moy_col4 = 0;
 
 float moyennesColonnes[4];
 
+int nbLignesVecteurIrisData = sizeof(tab_vecteurs)/sizeof(tab_vecteurs[0]);
+int nbColonnesVecteurIrisData = sizeof(tab_vecteurs[0])/sizeof(tab_vecteurs[0].vecteurData[0]) + 1;
+
 //fonction qui prend en paramètre le fichier de données iris-data
 //et qui récupère chaque vecteurs afin de les sauvegarder dans un tableau de vecteurs
 void convertIrisDataToStruct(FILE *fichier)
@@ -97,10 +100,10 @@ void convertIrisDataToStruct(FILE *fichier)
 //fonction qui affiche les vecteurs iris data
 void afficherDonneesVecteurs()
 {
-    for (int i = 0; i < 150; i++)
+    for (int i = 0; i < nbLignesVecteurIrisData; i++)
     {
         printf("Vecteur: %d\t\t", (i + 1));
-        for (int j = 0; j < 4; j++)
+        for (int j = 0; j < nbColonnesVecteurIrisData; j++)
         {
             printf("%f\t", tab_vecteurs[i].vecteurData[j]);
         }
@@ -111,7 +114,7 @@ void afficherDonneesVecteurs()
 //fonction qui affiche les module de données des vecteurs iris-data
 void afficherModuleDonneesVecteurs()
 {
-    for (int i = 0; i < 150; i++)
+    for (int i = 0; i < nbLignesVecteurIrisData; i++)
     {
         printf("Module [%d] = %f\n", i + 1, tab_vecteurs[i].module);
     }
@@ -120,9 +123,9 @@ void afficherModuleDonneesVecteurs()
 //remplacement de chaque donnees du vecteur. (donnee j du vecteur/module i du vecteur)
 void normaliseVecteurs()
 {
-    for (int i = 0; i < 150; i++)
+    for (int i = 0; i < nbLignesVecteurIrisData; i++)
     {
-        for (int j = 0; j < 4; j++)
+        for (int j = 0; j < nbColonnesVecteurIrisData; j++)
         {
             tab_vecteurs[i].vecteurData[j] = tab_vecteurs[i].vecteurData[j] / tab_vecteurs[i].module;
         }
@@ -133,9 +136,9 @@ void normaliseVecteurs()
 void calculMoyColonneVecteurs()
 {
     float tempVal = 0;
-    for (int j = 0; j < 4; j++)
+    for (int j = 0; j < nbColonnesVecteurIrisData; j++)
     {
-        for (int i = 0; i < 150; i++)
+        for (int i = 0; i < nbLignesVecteurIrisData; i++)
         {
             tempVal += tab_vecteurs[i].vecteurData[j];
         }
@@ -166,9 +169,9 @@ void melangeStructVecteurs()
 {
     int randomNumber = 0;
     struct vecteurIrisData tab_vec_temp;
-    for (int i = 0; i < 150; i++)
+    for (int i = 0; i < nbLignesVecteurIrisData; i++)
     {
-        randomNumber = rand() % 150;
+        randomNumber = rand() % nbLignesVecteurIrisData;
 
         tab_vec_temp = tab_vecteurs[i];
         //printf("temp%f|%f|%f|%f\n", tab_vec_temp.vecteurData[0], tab_vec_temp.vecteurData[1], tab_vec_temp.vecteurData[2], tab_vec_temp.vecteurData[3]);
@@ -230,8 +233,8 @@ void configReseauMatrice(int lignes, int colonnes)
     {
         for (int j = 0; j < colonnes; j++)
         {
-            matrice[i][j].vecteurData = (double *)malloc(4 * sizeof(double));
-            for (int k = 0; k < 4; k++)
+            matrice[i][j].vecteurData = (double *)malloc(nbLignesVecteurIrisData * sizeof(double));
+            for (int k = 0; k < nbColonnesVecteurIrisData; k++)
             {
                 matrice[i][j].vecteurData[k] = RandDouble((moyennesColonnes[k] - 0.05), (moyennesColonnes[k] + 0.05)); //randomNum;
                 matrice[i][j].etiquette = "?????????";
@@ -250,7 +253,7 @@ void afficheMatriceNode(struct nodeMatrice **matrice)
         printf("Node[%d]\t\t", (i + 1));
         for (int j = 0; j < nodeConfig.nb_colonnes; j++)
         {
-            for (int k = 0; k < 4; k++)
+            for (int k = 0; k < nbColonnesVecteurIrisData; k++)
             {
                 printf("%f|", matrice[i][j].vecteurData[k]);
             }
@@ -403,7 +406,7 @@ void modifVoisinnage(int degreVoisin, int numVecteurIrisData, int nbTourIteratio
 
             if ((i >= 0 && i < nodeConfig.nb_lignes) && (j >= 0 && j < nodeConfig.nb_colonnes))
             {
-                for (int k = 0; k < 4; k++)
+                for (int k = 0; k < nbColonnesVecteurIrisData; k++)
                 {
                     nodeConfig.map[i][j].vecteurData[k] = nodeConfig.map[i][j].vecteurData[k] + (alpha * (tab_vecteurs[numVecteurIrisData].vecteurData[k] - nodeConfig.map[i][j].vecteurData[k]));
                 }
@@ -425,25 +428,26 @@ void calculDistanceNodeVecteur()
     cell->ligne = 0;
     cell->nbBMU = 0;
     nodeConfig.bmu = tete;
-
+    
+    double tempDist = 0;
     int nbTourIteration = 1;
     int degreVoisin = 3;
     int x = ((int)(500/3)); //166
     
-
     while (nbTourIteration <= 2000)
     {
-        for (int i = 0; i < 150; i++)
+        for (int i = 0; i < nbLignesVecteurIrisData; i++)
         { //tab_vecteurs
             for (int j = 0; j < nodeConfig.nb_lignes; j++)
             { //matrice[j]
                 for (int k = 0; k < nodeConfig.nb_colonnes; k++)
                 { //matrice[j][k]
-                    nodeConfig.map[j][k].distance = sqrt(
-                        pow((tab_vecteurs[i].vecteurData[0]) - (nodeConfig.map[j][k].vecteurData[0]), 2) +
-                        pow((tab_vecteurs[i].vecteurData[1]) - (nodeConfig.map[j][k].vecteurData[1]), 2) +
-                        pow((tab_vecteurs[i].vecteurData[2]) - (nodeConfig.map[j][k].vecteurData[2]), 2) +
-                        pow((tab_vecteurs[i].vecteurData[3]) - (nodeConfig.map[j][k].vecteurData[3]), 2));
+                    for (int u = 0; u < nbColonnesVecteurIrisData; u++){
+                        tempDist += pow((tab_vecteurs[i].vecteurData[u]) - (nodeConfig.map[j][k].vecteurData[u]), 2);
+                    }
+                    nodeConfig.map[j][k].distance = sqrt(tempDist);
+                    tempDist = 0;
+                    
 
                     if (nodeConfig.map[j][k].distance == nodeConfig.map[cell->ligne][cell->colonne].distance)
                     {
@@ -540,6 +544,13 @@ int main()
 
     //libereDonneesVecteurs();
     printf("\nFin du programme\n");
+
+
+    printf("%d\n", nodeConfig.nb_nodes);
+    
+
+    printf("Lignes: %d\n", nbLignesVecteurIrisData);
+    printf("Colonnes: %d\n", nbColonnesVecteurIrisData);
     //melangeStructVecteurs();
     return 0;
 }
