@@ -37,6 +37,7 @@ struct bmu
 };
 
 struct N_Config nodeConfig;
+
 struct nodeMatrice **matrice;
 
 struct bmu *cell, *tete;
