@@ -42,20 +42,11 @@ struct nodeMatrice **matrice;
 struct bmu *cell, *tete;
 
 struct vecteurIrisData tab_vecteurs_init[150];
-struct vecteurIrisData tab_vecteurs_shuffle[150];
-
-
-float moy_col1 = 0;
-float moy_col2 = 0;
-float moy_col3 = 0;
-float moy_col4 = 0;
 
 float moyennesColonnes[4];
 
 int nbLignesVecteurIrisData = sizeof(tab_vecteurs_init) / sizeof(tab_vecteurs_init[0]);
 int nbColonnesVecteurIrisData = sizeof(tab_vecteurs_init[0]) / sizeof(tab_vecteurs_init[0].vecteurData[0]) + 1;
-
-int* tabIndice;    //tableau contenant les indices allant de 0...nbLignesVecteurIrisData
 
 //fonction qui prend en paramètre le fichier de données iris-data
 //et qui récupère chaque vecteurs afin de les sauvegarder dans un tableau de vecteurs
@@ -65,33 +56,37 @@ void convertIrisDataToStruct(FILE *fichier)
     char line[50];
     const char *separators = ",";
     float moduleTemp = 0;
-    
+
     int nbElemLine = 1;
 
-    if (fichier != NULL)
+    if (fichier == NULL)
+    {
+        printf("Erreur! Ce fichier n'existe pas");
+    }
+    else
     {
         //permet de recuperer le nombre d elements d une ligne afin d avoir une lecture
         //dynamique en fonction du nombre des elements sans valeur statique dans la fonction
         char *strTmpToken = fgets(line, 1000, fichier);
         strtok(strTmpToken, separators);
 
-        while(strtok(NULL, separators) != NULL)
+        while (strtok(NULL, separators) != NULL)
         {
-                nbElemLine += 1;
+            nbElemLine += 1;
         }
         //printf("NbMots: %d\n", nbElemLine);
         rewind(fichier);
 
         while (fgets(line, 1000, fichier))
-        {            
+        {
             char *strToken = strtok(line, separators);
             tab_vecteurs_init[compteur].vecteurData = (double *)malloc(4 * sizeof(double));
 
             for (int i = 0; i < nbElemLine; i++)
             {
-                if (i < nbElemLine-1)
+                if (i < nbElemLine - 1)
                 {
-                    tab_vecteurs_init[compteur].vecteurData[i] = atof(strToken);
+                    tab_vecteurs_init[compteur].vecteurData[i] = strtod(strToken, NULL); //atof(strToken);
                     moduleTemp += pow(tab_vecteurs_init[compteur].vecteurData[i], 2);
                 }
                 else
@@ -107,19 +102,17 @@ void convertIrisDataToStruct(FILE *fichier)
         }
         fclose(fichier);
     }
-    else
-    {
-        printf("Erreur! Ce fichier n'existe pas");
-    }
 }
 
-void indiceAutoIncrement()
+int *indiceAutoIncrement()
 {
-    tabIndice = (int*) malloc(nbLignesVecteurIrisData*sizeof(int));
-    for(int i = 0; i < nbLignesVecteurIrisData; i++)
+    //tableau contenant les indices allant de 0...nbLignesVecteurIrisData
+    int *tabIndice = (int *)malloc(nbLignesVecteurIrisData * sizeof(int));
+    for (int i = 0; i < nbLignesVecteurIrisData; i++)
     {
         tabIndice[i] = i;
     }
+    return tabIndice;
 }
 
 //remplacement de chaque donnees du vecteur. (donnee j du vecteur/module i du vecteur)
@@ -135,8 +128,9 @@ void normaliseVecteurs()
 }
 
 //fonction permettant le calcul de la moyenne de chaque colonne des vecteurs de données iris-data
-void calculMoyColonneVecteurs()
+float *calculMoyColonneVecteurs()
 {
+    float *moyennesColonnes = (float *)malloc(nbColonnesVecteurIrisData * sizeof(float));
     float tempVal = 0;
     for (int j = 0; j < nbColonnesVecteurIrisData; j++)
     {
@@ -162,11 +156,11 @@ void calculMoyColonneVecteurs()
         }
         tempVal = 0;
     }
-
+    return moyennesColonnes;
 }
 
 //fonction permettant un shuffle des vecteurs de données iris-data
-void melangeStructVecteurs()
+void melangeStructVecteurs(int *tabIndice)
 {
     int tempValue;
     int randomNumber = 0;
@@ -181,7 +175,6 @@ void melangeStructVecteurs()
     }
 }
 
-
 //fonction permettant de retourner une valeur de type double random
 //entre un min et max passé en paramètre
 double RandDouble(double min, double max)
@@ -194,7 +187,7 @@ double RandDouble(double min, double max)
 //fonction qui initialise le reseau de la matrice
 //afin de lui allouer la mémoire pour les lignes et colonnes
 //avec comme données une valeur aléatoire comprise entre -0.05 et +0.05 autour de la moyenne de chaque colonne des vecteurs iris-data
-void configReseauMatrice(int lignes, int colonnes)
+void configReseauMatrice(int lignes, int colonnes, float *moyennesColonnes)
 {
     matrice = malloc(lignes * sizeof(struct nodeMatrice *));
 
@@ -258,7 +251,6 @@ void afficheDistanceNodeVecteur()
     }
 }
 
-
 //fonction permettant d'afficher la liste de tout les BMU pendant l'itération en cours
 void afficheBmu()
 {
@@ -299,6 +291,7 @@ void afficheMatriceNodeNom(struct nodeMatrice **matrice)
             {
                 printf("\033[0;33m");
             }
+
 
             printf("%c", matrice[i][j].etiquette[8]);
             printf("\033[0m");
@@ -371,7 +364,7 @@ int trouveDegreVoisinage(){
 //sélectionne un BMU random entre 1 et nombre total de BMU pendant l'itération en cours
 //et met à jour les données des vecteurs du bmu ainsi que de son voisinage suivant le nombre d'itération réalisé
 //avec une valeur alpha de 0.7 pour les 500 premières itérations à 0.07 pour les 1500 dernières itérations (10%)
-void modifVoisinnage(int degreVoisin, int numVecteurIrisData, int nbTourIteration)
+void modifVoisinnage(int degreVoisin, int numVecteurIrisData, int nbTourIteration, int *tabIndice)
 {
     float alpha;
 
@@ -379,7 +372,7 @@ void modifVoisinnage(int degreVoisin, int numVecteurIrisData, int nbTourIteratio
     struct bmu *bmuFinal;
     int nbBMU = bmuTemp->nbBMU;
 
-    int randomBMU = (rand() % (nbBMU - 1 + 1)) + 1; //valeur random entre 1 et le nombre de BMU dans l'itération en cours
+    int randomBMU = (rand() % (nbBMU)) + 1; //valeur random entre 1 et le nombre de BMU dans l'itération en cours
 
     int x = 1;
 
@@ -424,9 +417,47 @@ void modifVoisinnage(int degreVoisin, int numVecteurIrisData, int nbTourIteratio
     }
 }
 
-//fonction qui calcule la distance de chaque vecteurs de nodes de la matrice, vérifie la présence d'un ou plusieurs BMU
-//et qui appelle une autre fonction modifiant le BMU ainsi que son voisinage
-void calculDistanceNodeVecteur()
+void resetEtiquette()
+{
+    for (int i = 0; i < nodeConfig.nb_lignes; i++)
+    { //tab_vecteurs
+        for (int j = 0; j < nodeConfig.nb_colonnes; j++)
+        { //matrice[j]
+            nodeConfig.map[i][j].etiquette = "?????????";
+        }
+    }
+}
+
+void etiquetteFinale(int numVecteurIrisData, int *tabIndice)
+{
+
+    struct bmu *bmuTemp = nodeConfig.bmu;
+    struct bmu *bmuFinal;
+    int nbBMU = bmuTemp->nbBMU;
+
+    int randomBMU = (rand() % (nbBMU)) + 1; //valeur random entre 1 et le nombre de BMU dans l'itération en cours
+
+    int x = 1;
+
+    //permet de récupérer un bmu aléatoire de la liste chainée
+    while (bmuTemp != NULL)
+    {
+        if (x == randomBMU)
+        {
+            bmuFinal = bmuTemp;
+            break;
+        }
+        x++;
+        bmuTemp = bmuTemp->next;
+    }
+
+    int ligneBMU = bmuFinal->ligne;
+    int colonneBMU = bmuFinal->colonne;
+
+    nodeConfig.map[ligneBMU][colonneBMU].etiquette = tab_vecteurs_init[tabIndice[numVecteurIrisData]].etiquette;
+}
+
+void getBmu(int degreVoisin, int nbTourIteration, int *tabIndice, int modifBool)
 {
     cell = (struct bmu *)malloc(sizeof(struct bmu));
     tete = cell;
@@ -436,75 +467,114 @@ void calculDistanceNodeVecteur()
     nodeConfig.bmu = tete;
 
     double tempDist = 0;
+
+    for (int i = 0; i < nbLignesVecteurIrisData; i++)
+    { //tab_vecteurs
+        for (int j = 0; j < nodeConfig.nb_lignes; j++)
+        { //matrice[j]
+            for (int k = 0; k < nodeConfig.nb_colonnes; k++)
+            { //matrice[j][k]
+                for (int u = 0; u < nbColonnesVecteurIrisData; u++)
+                {
+                    tempDist += pow((tab_vecteurs_init[tabIndice[i]].vecteurData[u]) - (nodeConfig.map[j][k].vecteurData[u]), 2);
+                }
+                nodeConfig.map[j][k].distance = sqrt(tempDist);
+                tempDist = 0;
+
+                if (nodeConfig.map[j][k].distance == nodeConfig.map[cell->ligne][cell->colonne].distance)
+                {
+                    cell->next = (struct bmu *)malloc(sizeof(struct bmu));
+                    cell->next->ligne = j;
+                    cell->next->colonne = k;
+                    cell->nbBMU += 1;
+                    cell->next->next = NULL;
+
+                    cell = cell->next;
+                }
+                else if (nodeConfig.map[j][k].distance < nodeConfig.map[cell->ligne][cell->colonne].distance)
+                {
+                    struct bmu *tmp = NULL;
+                    struct bmu *head = nodeConfig.bmu;
+                    while (head != NULL)
+                    {
+                        tmp = head->next;
+                        free(head);
+                        head = tmp;
+                    }
+
+                    cell = (struct bmu *)malloc(sizeof(struct bmu));
+                    tete = cell;
+                    cell->ligne = j;
+                    cell->colonne = k;
+                    cell->nbBMU = 1;
+                    nodeConfig.bmu = tete;
+                }
+            }
+        }
+
+        if (modifBool == 1)
+        {
+            //modifie le BMU et son voisinnage
+            modifVoisinnage(degreVoisin, i, nbTourIteration, tabIndice);
+        }else{
+            if(i == 0){//reset des etiquettes au debut de l'iteration
+                resetEtiquette();
+            }
+            etiquetteFinale(i, tabIndice);
+            
+        }
+
+    }
+                
+
+
+}
+
+//fonction qui calcule la distance de chaque vecteurs de nodes de la matrice, vérifie la présence d'un ou plusieurs BMU
+//et qui appelle une autre fonction modifiant le BMU ainsi que son voisinage
+void calculDistanceNodeVecteur(int *tabIndice)
+{
+
     int nbTourIteration = 1;
     int degreVoisin = 3;
-    int x = ((int)(500 / 3)); //166
+    //int x = ((int)(500 / 3)); //166
 
     while (nbTourIteration <= 2000)
     {
         //fonction de shuffle des vecteurs iris-data
-        melangeStructVecteurs();
+        melangeStructVecteurs(tabIndice);
 
-        for (int i = 0; i < nbLignesVecteurIrisData; i++)
-        { //tab_vecteurs
-            for (int j = 0; j < nodeConfig.nb_lignes; j++)
-            { //matrice[j]
-                for (int k = 0; k < nodeConfig.nb_colonnes; k++)
-                { //matrice[j][k]
-                    for (int u = 0; u < nbColonnesVecteurIrisData; u++)
-                    {
-                        tempDist += pow((tab_vecteurs_init[tabIndice[i]].vecteurData[u]) - (nodeConfig.map[j][k].vecteurData[u]), 2);
-                    }
-                    nodeConfig.map[j][k].distance = sqrt(tempDist);
-                    tempDist = 0;
-
-                    if (nodeConfig.map[j][k].distance == nodeConfig.map[cell->ligne][cell->colonne].distance)
-                    {
-                        cell->next = (struct bmu *)malloc(sizeof(struct bmu));
-                        cell->next->ligne = j;
-                        cell->next->colonne = k;
-                        cell->nbBMU += 1;
-                        cell->next->next = NULL;
-
-                        cell = cell->next;
-                    }
-                    else if (nodeConfig.map[j][k].distance < nodeConfig.map[cell->ligne][cell->colonne].distance)
-                    {
-                        cell = (struct bmu *)malloc(sizeof(struct bmu));
-                        tete = cell;
-                        cell->ligne = j;
-                        cell->colonne = k;
-                        cell->nbBMU = 1;
-                        nodeConfig.bmu = tete;
-                    }
-                }
-            }
-
-            //diminue le degre de voisinnage toute les 500/3 itérations
-            //passant d'un degré de 3 à 1 minimum
-            if (degreVoisin > 1)
+        //diminue le degre de voisinnage toute les 500/3 itérations
+        //passant d'un degré de 3 à 1 minimum
+        if (degreVoisin > 1)
+        {
+            if ((nbTourIteration % (500 / 3)) == 0)
             {
-                if (nbTourIteration == x)
-                {
-                    degreVoisin -= 1;
-                    x = x + ((int)(500 / 3));
-                }
+                degreVoisin -= 1;
             }
-
-            //modifie le BMU et son voisinnage
-            modifVoisinnage(degreVoisin, i, nbTourIteration);
         }
 
+        getBmu(degreVoisin, nbTourIteration, tabIndice, 1);
+
         //affiche la matrice couleur toutes les 500 itérations
-        if ((nbTourIteration % 500) == 0 || nbTourIteration == 1)
+        if (((nbTourIteration % 500) == 0))
         {
             printf("\nMatrice a l iteration numero %d\n", nbTourIteration);
             afficheMatriceNodeNom(nodeConfig.map);
         }
         nbTourIteration += 1;
     }
-}
 
+    //apres le cycle d'apprentissage, on effectue une derniere iteration
+    //afin d'attribuer correctement chaque etiquette a chaque BMU
+    melangeStructVecteurs(tabIndice);
+
+    getBmu(degreVoisin, 2001, tabIndice, 0);
+    printf("\nMatrice finale\n");
+
+    afficheMatriceNodeNom(nodeConfig.map);
+
+}
 
 //////////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////Fonctions liberation memoire///////////////////////////////
@@ -531,34 +601,35 @@ void libereMemoire()
     free(matrice);
     printf("Liberation de la memoire de la matrice de nodes.\n");
 
-    struct bmu *tmp;
+    struct bmu *tmp = NULL;
     struct bmu *head = nodeConfig.bmu;
-    while(head != NULL){
-        tmp = head;
-        head = head->next;
-        free(tmp);
+    while (head != NULL)
+    {
+        tmp = head->next;
+        free(head);
+        head = tmp;
     }
     printf("Liberation de la memoire de la liste chainee de BMU.\n");
-
 }
 
 int main()
 {
-    
     FILE *fichier = fopen("iris.data", "r");
     srand(time(NULL));
+
     convertIrisDataToStruct(fichier);
-    indiceAutoIncrement();
+
+    int *tabIndice = indiceAutoIncrement();
 
     normaliseVecteurs();
 
-    calculMoyColonneVecteurs();
-    configReseauMatrice(10,6);
+    float *moyennesColonnes = calculMoyColonneVecteurs();
+    configReseauMatrice(10, 6, moyennesColonnes);
 
-    calculDistanceNodeVecteur();
+    calculDistanceNodeVecteur(tabIndice);
 
     libereMemoire();
     printf("\nFin du programme\n");
-    
+
     return 0;
 }
